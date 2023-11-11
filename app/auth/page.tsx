@@ -2,11 +2,14 @@
 import { Button, FormControl, FormLabel, Input } from '@chakra-ui/react';
 import React, { useState } from 'react'
 import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
-
+import axios from 'axios';
+import {signIn} from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 function auth() {
     const [authType, setAuthType] = useState<"signin" | "signup">("signin");
     const [showPasswod, setshowPasswod] = useState<boolean>(false);
+    const router = useRouter();
 
     const { register: signInRegister,
         handleSubmit: handleSignInSubmit,
@@ -14,11 +17,36 @@ function auth() {
         })
     const { register: signUpRegister,
         handleSubmit: handleSignUpSubmit,
+        watch,
         formState: { errors: signUpErrors } } = useForm<FieldValues>({
         })
     const onSignInSubmit: SubmitHandler<FieldValues> = (data) => {
         console.log(data);
 
+    }
+    const onSignUpSubmit: SubmitHandler<FieldValues> = (data) => {
+        axios.post('/api/register', data).then(async() => {
+            signIn("credentials", {
+                email: data.email,
+                password: data.password,
+                redirect: false
+            }).then((callback:any) => {
+                console.log("here...");
+                console.log(callback,callback?.ok,callback?.error);
+                
+                if (callback?.ok) {
+                    router.push('/dashboard')
+                    router.refresh(
+                        //toast sucess
+                    )
+                } else if (callback?.err) {
+                    //toast error
+                }
+            })
+            console.log('Account created')
+        })
+
+        
     }
 
     return (
@@ -26,41 +54,54 @@ function auth() {
             <div className='w-full sm:!max-w-md ml-auto bg-blue-200 h-full'>
                 {authType == 'signin' ? (
                     <div className='my-10 pt-10 bg-inherit space-y-3'>
-                        <FormControl variant="floating" className='bg-inherit'>
-                            <Input placeholder=" " {...signInRegister("userName",{ required: true })} />
+                        <FormControl variant="floating" className='bg-inherit' >
+                            <Input placeholder=" " {...signInRegister("userName", { required: true })} />
                             <FormLabel >user name</FormLabel>
                         </FormControl>
                         <div className='relative'>
                             <FormControl variant="floating" className='bg-inherit' >
-                                <Input type={showPasswod ? 'text' : 'password'} placeholder=" " {...signInRegister("password",{ required: true })} />
+                                <Input type={showPasswod ? 'text' : 'password'} placeholder=" " {...signInRegister("password", { required: true })} />
                                 <FormLabel >password</FormLabel>
                             </FormControl>
                             <span onClick={() => setshowPasswod(!showPasswod)} className='absolute right-0 top-2 z-30'>
                                 {showPasswod ? 'Hide' : 'Show'}
                             </span>
                         </div>
-                        <Button  loadingText='Signing in' onClick={handleSignInSubmit(onSignInSubmit)} >
+                        <Button loadingText='Signing in' onClick={handleSignInSubmit(onSignInSubmit)} >
                             Sign in
                         </Button>
                     </div>) : (
                     <div className='my-10 pt-10 bg-inherit'>
                         <FormControl variant="floating" className='bg-inherit'>
-                            <Input placeholder=" " />
+                            <Input placeholder=" " {...signUpRegister("email", { required: true })} />
                             <FormLabel >email</FormLabel>
                         </FormControl>
                         <FormControl variant="floating" className='bg-inherit'>
-                            <Input placeholder=" " />
+                            <Input placeholder=" " {...signUpRegister("name", { required: true })} />
                             <FormLabel >user name</FormLabel>
                         </FormControl>
                         <FormControl variant="floating" className='bg-inherit'>
-                            <Input placeholder=" " />
+                            <Input placeholder=" " {...signUpRegister("password", { required: true })} />
                             <FormLabel>password</FormLabel>
                         </FormControl>
-                        <FormControl variant="floating" className='bg-inherit'>
-                            <Input placeholder=" " />
-                            <FormLabel>re enter password</FormLabel>
+                        <FormControl variant="floating" className='bg-inherit' >
+                            <Input placeholder=" " {...signUpRegister("confirm_password", {
+                                required: true,
+                                validate: (val: any) => {
+                                    console.log(watch('password'));
+                                    if (watch('password') != val) {
+                                        return "Your passwords do no match";
+                                    }
+                                },
+                            })} />
+                            <FormLabel>re enter password</FormLabel>{signUpErrors.confirm_password && (
+                                <span className="text-red-500">{signUpErrors.confirm_password.message as any}</span>
+                            )}
                         </FormControl>
-                        <Button isLoading loadingText='Signing up'                         >
+                        {signUpErrors.confirm_password && (
+                            <span className="text-red-500">{signUpErrors.confirm_password.message as any}</span>
+                        )}
+                        <Button loadingText='Signing up' onClick={handleSignUpSubmit(onSignUpSubmit)} >
                             Sign up
                         </Button>
                     </div>
