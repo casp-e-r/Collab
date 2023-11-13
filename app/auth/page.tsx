@@ -5,11 +5,14 @@ import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
 import axios from 'axios';
 import {signIn} from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react"
 
-function auth() {
+function  auth() {
     const [authType, setAuthType] = useState<"signin" | "signup">("signin");
     const [showPasswod, setshowPasswod] = useState<boolean>(false);
     const router = useRouter();
+    const {data} : any = useSession()
+      console.log(data);
 
     const { register: signInRegister,
         handleSubmit: handleSignInSubmit,
@@ -20,29 +23,21 @@ function auth() {
         watch,
         formState: { errors: signUpErrors } } = useForm<FieldValues>({
         })
-    const onSignInSubmit: SubmitHandler<FieldValues> = (data) => {
-        console.log(data);
-
+    const onSignInSubmit: SubmitHandler<FieldValues> = async (data) => {
+        const res = await signIn("email", {
+            email: data.email,
+            password: data.password,
+            // redirect: false
+        })
     }
     const onSignUpSubmit: SubmitHandler<FieldValues> = (data) => {
         axios.post('/api/register', data).then(async() => {
-            signIn("credentials", {
+            const res = await signIn("credentials", {
                 email: data.email,
                 password: data.password,
                 redirect: false
-            }).then((callback:any) => {
-                console.log("here...");
-                console.log(callback,callback?.ok,callback?.error);
-                
-                if (callback?.ok) {
-                    router.push('/dashboard')
-                    router.refresh(
-                        //toast sucess
-                    )
-                } else if (callback?.err) {
-                    //toast error
-                }
             })
+
             console.log('Account created')
         })
 
@@ -88,7 +83,6 @@ function auth() {
                             <Input placeholder=" " {...signUpRegister("confirm_password", {
                                 required: true,
                                 validate: (val: any) => {
-                                    console.log(watch('password'));
                                     if (watch('password') != val) {
                                         return "Your passwords do no match";
                                     }
