@@ -3,16 +3,16 @@ import { Button, FormControl, FormLabel, Input } from '@chakra-ui/react';
 import React, { useState } from 'react'
 import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
 import axios from 'axios';
-import {signIn} from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react"
 
-function  auth() {
+function auth() {
     const [authType, setAuthType] = useState<"signin" | "signup">("signin");
     const [showPasswod, setshowPasswod] = useState<boolean>(false);
     const router = useRouter();
-    const {data} : any = useSession()
-      console.log(data);
+    const { data }: any = useSession()
+    console.log(data);
 
     const { register: signInRegister,
         handleSubmit: handleSignInSubmit,
@@ -24,28 +24,39 @@ function  auth() {
         formState: { errors: signUpErrors } } = useForm<FieldValues>({
         })
     const onSignInSubmit: SubmitHandler<FieldValues> = async (data) => {
-        const res = await signIn("email", {
+        await signIn("credentials", {
             email: data.email,
             password: data.password,
-            // redirect: false
+            redirect: true
+        }, { callbackUrl: "/dashboard" }).then((res) => {
+            if (res?.status === 200) {
+                router.push('/dashboard')
+            } else {
+                console.log('Account created.Login failed, try again login')
+            }
         })
     }
     const onSignUpSubmit: SubmitHandler<FieldValues> = (data) => {
-        axios.post('/api/register', data).then(async() => {
-            const res = await signIn("credentials", {
+        axios.post('/api/register', data).then(async () => {
+            await signIn("credentials", {
                 email: data.email,
                 password: data.password,
-                redirect: false
+                redirect: true
+            }, { callbackUrl: "/dashboard" }).then((res) => {
+                if (res?.ok) {
+                    router.push('/dashboard')
+                } else {
+                    console.log('Account created.Login failed, try again login')
+                }
             })
-
-            console.log('Account created')
         })
-
-        
     }
 
     return (
         <div className='h-screen grid grid-flow-col'>
+            <Button loadingText='Signing in' onClick={()=>router.push("/")} >
+                Navigate
+            </Button>
             <div className='w-full sm:!max-w-md ml-auto bg-blue-200 h-full'>
                 {authType == 'signin' ? (
                     <div className='my-10 pt-10 bg-inherit space-y-3'>

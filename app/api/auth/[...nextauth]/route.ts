@@ -1,18 +1,16 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import GoogleProvider from "next-auth/providers/google"
+import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import { compare } from "bcrypt"
 import type { NextAuthOptions } from "next-auth";
-// import { users } from "@/helpers/constants"
 
-const prisma = new PrismaClient()
+const prisma:any = new PrismaClient()
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  // session: {
-  //   strategy: "jwt",
-  // },
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -25,8 +23,6 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials, req) {
-        console.log("AUTORIZE CREDENTIALS", credentials);
-
         if (!credentials?.email || !credentials.password) {
           throw new Error('email and password required')
         }
@@ -44,7 +40,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Invalid password')
           };
         }
-
+        console.log("user", user);
         return {
           id: user.id + '',
           email: user.email,
@@ -53,9 +49,17 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
-  adapter: PrismaAdapter(prisma),
+  session: {
+    strategy: "jwt",
+  },
   pages: {
     signIn: "/auth",
+  },
+  callbacks: {
+    async redirect({ url, baseUrl }) {
+      console.log(url,baseUrl);
+      return `${baseUrl}/dashboard`;
+    },
   },
 }
 
